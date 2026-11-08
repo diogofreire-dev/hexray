@@ -1,7 +1,7 @@
 # Usage:
 #   make                 builds build/hexray
 #   make debug           builds build/debug/hexray with ASan and UBSan
-#   make test            builds both and compares them with the real hexdump -C
+#   make test            builds both and runs every test script on them
 #   make run ARGS="dump README.md"     builds and runs the debug version
 #   make leaks ARGS="dump README.md"   checks the normal build for memory leaks
 #   make clean           removes build/
@@ -57,6 +57,8 @@ $(BUILD)/debug/obj/%.o: src/%.c
 test: $(TARGET) $(DEBUG_TARGET)
 	@tests/test_dump.sh $(DEBUG_TARGET)
 	@tests/test_dump.sh $(TARGET)
+	@tests/test_type.sh $(DEBUG_TARGET)
+	@tests/test_type.sh $(TARGET)
 
 # The leading - keeps make going if the program exits with an error code
 run: $(DEBUG_TARGET)

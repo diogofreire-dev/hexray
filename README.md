@@ -4,7 +4,7 @@ A static malware triage tool written in C. It looks at a suspicious file **witho
 
 I am building it while learning C for cybersecurity: it started as a clone of `hexdump -C`, and each phase of the roadmap adds a new analysis and a new C skill.
 
-> **Status:** phase 1 is done, so today hexray is a hex dump tool. The triage features are the roadmap below.
+> **Status:** phases 1 and 2 are done: hexray can show the bytes of a file and identify its real type. The remaining triage features are the roadmap below.
 
 ## Build
 
@@ -12,13 +12,15 @@ Needs `clang` and `make`. Developed on macOS (Apple Silicon).
 
 ```bash
 make         # builds build/hexray
-make test    # compares hexray with the real hexdump -C
+make test    # runs every test script
 make help    # lists the other targets
 ```
 
 `make debug` builds `build/debug/hexray` with AddressSanitizer and UndefinedBehaviorSanitizer, and `make test` runs the tests on both builds.
 
 ## Usage
+
+### `hexray dump`: show the bytes
 
 ```
 hexray dump [-v] [-s OFFSET] [-n LENGTH] [FILE]
@@ -40,10 +42,27 @@ $ build/hexray dump -n 32 src/main.c
 
 The output is identical to `hexdump -C`. `tests/test_dump.sh` checks this on empty files, zeros, random bytes, text, compiled binaries and stdin, across combinations of `-s`, `-n` and `-v`.
 
+### `hexray type`: identify the real file type
+
+```
+hexray type [FILE...]
+```
+
+Identifies each file by its first bytes, whatever it is called. Without `FILE`, it reads standard input.
+
+```console
+$ build/hexray type invoice.pdf /bin/ls notes.txt
+invoice.pdf: Windows executable (PE)  [MISMATCH: .pdf is the extension of: PDF document]
+/bin/ls: macOS universal binary
+notes.txt: Unknown (no known signature)
+```
+
+`MISMATCH` means the extension claims a format the content does not have. An extension hexray does not know is never flagged. The exit code is 0 when every file could be read, even if some were flagged, and 1 if any file could not be read.
+
 ## Roadmap
 
 - [x] **Phase 1: hex dump.** A byte-for-byte clone of `hexdump -C`.
-- [ ] **Phase 2: file type detection.** Magic bytes.
+- [x] **Phase 2: file type detection.** Magic bytes and fake extensions.
 - [ ] **Phase 3: strings.** Extraction and suspicious patterns.
 - [ ] **Phase 4: entropy.** Spotting packed or encrypted files.
 - [ ] **Phase 5: hashes.** SHA-256 written by hand.
