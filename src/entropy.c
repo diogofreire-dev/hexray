@@ -31,7 +31,6 @@
 // Few bytes cannot fill all 256 values, so a tiny block of pure noise would still score
 // low. From 1024 bytes up, random data reliably scores above the threshold below.
 #define MIN_BLOCK_SIZE 1024
-#define HIGH_ENTROPY 7.2
 #define MAX_ENTROPY 8
 #define MOSTLY_HIGH_PERCENT 70   // this much of the file must be high to call it packed
 #define BAR_WIDTH 32
@@ -92,6 +91,16 @@ static double shannon_entropy(const unsigned long long counts[], unsigned long l
         }
     }
     return entropy;
+}
+
+double entropy_of_bytes(const unsigned char *data, size_t length)
+{
+    unsigned long long counts[BYTE_VALUES] = {0};
+    for (size_t i = 0; i < length; i++)
+    {
+        counts[data[i]]++;
+    }
+    return shannon_entropy(counts, length);
 }
 
 static void print_bar(double entropy)

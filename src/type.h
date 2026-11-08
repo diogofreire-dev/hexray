@@ -10,8 +10,9 @@
 // Returns the exit code for the program (0 = every file could be read).
 int cmd_type(int argc, char *argv[]);
 
-// How many bytes from the start of a file type_identify needs to see
-#define TYPE_HEADER_SIZE 8
+// How many bytes from the start of a file type_identify looks at. A PE file needs more
+// than its signature, because its real header comes after the old DOS one.
+#define TYPE_HEADER_SIZE 4096
 
 // Identifies a format from the first bytes of a file, for other subcommands to use.
 // Returns its name, or NULL if unknown. Sets *is_executable to 1 for native programs.

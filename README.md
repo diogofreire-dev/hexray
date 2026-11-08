@@ -4,11 +4,11 @@ A static malware triage tool written in C. It looks at a suspicious file **witho
 
 I am building it while learning C for cybersecurity: it started as a clone of `hexdump -C`, and each phase of the roadmap adds a new analysis and a new C skill.
 
-> **Status:** phases 1 to 5 are done: hexray can show the bytes of a file, identify its real type, extract suspicious strings, spot packed or encrypted content and compute its SHA-256. The remaining triage features are the roadmap below.
+> **Status:** phases 1 to 6 are done: hexray can show the bytes of a file, identify its real type, extract suspicious strings, spot packed or encrypted content, compute its SHA-256 and read ELF and PE headers. The remaining triage features are the roadmap below.
 
 ## Build
 
-Needs `clang` and `make`. Developed on macOS (Apple Silicon).
+Needs `clang` and `make` (and `python3` for `make test`). Developed on macOS (Apple Silicon).
 
 ```bash
 make         # builds build/hexray
@@ -139,6 +139,41 @@ ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad  -
 
 Search the hash on VirusTotal or MalwareBazaar to see whether a file is already known as malware. Search the hash and do not upload the file: uploads can be seen by others, including whoever made the malware, and a private document would be exposed.
 
+### `hexray headers`: sections and imports of ELF and PE files
+
+```
+hexray headers [-f] [FILE]
+```
+
+| Option | Meaning |
+|---|---|
+| `-f` | show only the flagged imports |
+| `FILE` | file to read; without it, read standard input |
+
+```console
+$ build/hexray headers -f sample.exe
+Format:   PE32+, x86-64
+Entry:    0x1234
+
+Name              Offset    Size      Entropy  Perms
+.text             00000400  00001a00  6.21     r-x
+.data             00001e00  00000400  2.87     rw-
+.packed           00002200  00006000  7.97     rwx  HIGH
+
+Imports:  41
+  KERNEL32.dll!WriteProcessMemory  [INJECTION]
+  KERNEL32.dll!CreateRemoteThread  [INJECTION]
+  KERNEL32.dll!IsDebuggerPresent  [ANTI-ANALYSIS]
+Warning:  section .packed is both writable and executable
+Warning:  imports match the classic code injection pattern
+```
+
+Import flags: `INJECTION`, `ANTI-ANALYSIS`, `DOWNLOAD`, `EXECUTION`, `KEYLOGGING` and `PERSISTENCE`. As with the other commands, they say where to look and do not prove anything: many legitimate programs call `IsDebuggerPresent`.
+
+Executables are hostile input, so every offset and size in them is treated as untrusted. All reads go through bounds-checked functions in `src/binary.c`. A damaged file gives whatever could still be read plus a warning, and `tests/test_headers.sh` runs corrupted and truncated files through the sanitized build.
+
+Limitations: Mach-O is not supported, and an ELF with its section table stripped shows no sections or imports, even though the imports could still be recovered through its program headers.
+
 ## Roadmap
 
 - [x] **Phase 1: hex dump.** A byte-for-byte clone of `hexdump -C`.
@@ -146,7 +181,7 @@ Search the hash on VirusTotal or MalwareBazaar to see whether a file is already 
 - [x] **Phase 3: strings.** Extraction and suspicious patterns.
 - [x] **Phase 4: entropy.** Spotting packed or encrypted files.
 - [x] **Phase 5: hashes.** SHA-256 written by hand.
-- [ ] **Phase 6: executable headers.** ELF and PE.
+- [x] **Phase 6: executable headers.** ELF and PE.
 - [ ] **Phase 7: signatures.** A mini YARA.
 
 Each phase will be added as a new subcommand.

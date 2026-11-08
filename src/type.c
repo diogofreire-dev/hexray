@@ -22,12 +22,14 @@
 #include <unistd.h>
 
 #define COMMAND_NAME "hexray type"
+#define MAX_MAGIC 8
 #define MAX_EXTENSIONS 12
+#define PE_HEADER_POINTER 0x3c
 
 typedef struct
 {
     const char *name;
-    unsigned char magic[TYPE_HEADER_SIZE];
+    unsigned char magic[MAX_MAGIC];
     size_t magic_length;    // 0 = this format has no signature (plain text)
     // Optional second check, for formats that share a signature. NULL = none needed.
     int (*confirm)(const unsigned char *header, size_t length);
@@ -60,8 +62,27 @@ static int is_java_class(const unsigned char *header, size_t length)
     return length >= 8 && read_be32(header + 4) >= FIRST_JAVA_VERSION;
 }
 
+// "MZ" is only two bytes and plenty of files start with them by chance. A real Windows
+// program stores, at offset 0x3c, where its PE header is, and that header starts with
+// "PE\0\0". (Little-endian, so the first byte of the field is the least significant.)
+static int is_pe(const unsigned char *header, size_t length)
+{
+    if (length < PE_HEADER_POINTER + 4)
+    {
+        return 0;
+    }
+
+    const unsigned char *field = header + PE_HEADER_POINTER;
+    uint32_t pe_header = (uint32_t) field[3] << 24 | (uint32_t) field[2] << 16 |
+                         (uint32_t) field[1] << 8 | field[0];
+
+    return pe_header <= length - 4 && memcmp(header + pe_header, "PE\0\0", 4) == 0;
+}
+
 static const FileType types[] = {
-    {"Windows executable (PE)", {0x4d, 0x5a}, 2, NULL, 1,
+    {"Windows executable (PE)", {0x4d, 0x5a}, 2, is_pe, 1,
+     {"exe", "dll", "sys", "scr", "ocx", "cpl", "com", "efi"}},
+    {"MZ file without a PE header (old DOS program?)", {0x4d, 0x5a}, 2, NULL, 1,
      {"exe", "dll", "sys", "scr", "ocx", "cpl", "com", "efi"}},
     {"Linux executable (ELF)", {0x7f, 0x45, 0x4c, 0x46}, 4, NULL, 1,
      {"so", "o", "elf"}},

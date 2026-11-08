@@ -37,7 +37,8 @@ JPEG="JPEG image"
 UNKNOWN="Unknown (no known signature)"
 
 # Magic bytes, as printf formats (\x25 is %, which printf would otherwise interpret)
-MAGIC_PE='MZ\x90\x00'
+# A PE signature needs its real header: "MZ", then at 0x3c the offset of "PE\0\0"
+MAGIC_PE="MZ$(printf '\\x00%.0s' {1..58})\\x40\\x00\\x00\\x00PE\\x00\\x00"
 MAGIC_ELF='\x7fELF\x02\x01\x01\x00'
 MAGIC_MACHO='\xcf\xfa\xed\xfe\x0c\x00\x00\x01'
 MAGIC_UNIVERSAL='\xca\xfe\xba\xbe\x00\x00\x00\x02'
@@ -96,6 +97,14 @@ has_type paper.pdf "$MAGIC_PDF" "$PDF"
 has_type image.png "$MAGIC_PNG" "$PNG"
 has_type photo.jpg "$MAGIC_JPEG" "$JPEG"
 has_type photo.jpeg "$MAGIC_JPEG" "$JPEG"
+
+# Starting with MZ is not enough to be a Windows program
+MZ_ONLY="MZ file without a PE header (old DOS program?)"
+has_type mz-text 'MZ is how this text starts' "$MZ_ONLY"
+has_type dos.com 'MZ\x90\x00' "$MZ_ONLY"
+has_type short-mz 'MZ' "$MZ_ONLY"
+has_type far-pointer "MZ$(printf '\\x00%.0s' {1..58})\\xff\\xff\\xff\\xff" "$MZ_ONLY"
+is_fake mz.pdf 'MZ\x90\x00' "$MZ_ONLY" "$PDF"
 
 # Disguises
 is_fake invoice.pdf "$MAGIC_PE" "$PE" "$PDF"

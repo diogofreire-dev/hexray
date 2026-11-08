@@ -160,7 +160,8 @@ with_magic() {
     { printf "$1"; cat uniform uniform; } >"$2"
 }
 
-with_magic 'MZ\x90\x00' fake-pe
+# A PE signature needs its real header: "MZ", then at 0x3c the offset of "PE\0\0"
+with_magic "MZ$(printf '\\x00%.0s' {1..58})\\x40\\x00\\x00\\x00PE\\x00\\x00" fake-pe
 has_line "Type:     Windows executable (PE)" fake-pe
 has_line "$PACKED" fake-pe
 with_magic '\x7fELF\x02\x01\x01\x00' fake-elf
