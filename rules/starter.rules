@@ -1,0 +1,34 @@
+# Starter rules for `hexray scan -r rules/starter.rules FILE`.
+#
+# Format:  name: hex bytes, with ?? for any byte. A # starts a comment.
+# Matching is exact, so text in upper and lower case needs separate rules.
+#
+# A match says where to look. It does not prove a file is malicious.
+
+# Packers: text that UPX leaves in the files it compresses
+upx_magic: 55 50 58 21
+upx_section: 55 50 58 30
+
+# The standard antivirus test file. Only part of its text, written in hex, so that
+# this rules file does not set off an antivirus itself.
+eicar_test_file: 45 49 43 41 52 2d 53 54 41 4e 44 41 52 44 2d 41 4e 54 49 56 49 52 55 53 2d 54 45 53 54 2d 46 49 4c 45
+
+# Executable headers: "PE\0\0" followed by the machine type
+pe_x86: 50 45 00 00 4c 01
+pe_x86_64: 50 45 00 00 64 86
+pe_arm64: 50 45 00 00 64 aa
+
+# ELF, 64-bit, little-endian: 11 bytes that vary, then the machine type (x86-64)
+elf64_x86_64: 7f 45 4c 46 02 01 01 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 3e 00
+
+# Running hidden commands
+powershell_encoded_ascii: 2d 45 6e 63 6f 64 65 64 43 6f 6d 6d 61 6e 64
+powershell_encoded_utf16: 2d 00 45 00 6e 00 63 00 6f 00 64 00 65 00 64 00 43 00 6f 00 6d 00 6d 00 61 00 6e 00 64 00
+
+# Surviving a reboot: the registry key that runs programs at logon
+run_key_ascii: 43 75 72 72 65 6e 74 56 65 72 73 69 6f 6e 5c 52 75 6e
+run_key_utf16: 43 00 75 00 72 00 72 00 65 00 6e 00 74 00 56 00 65 00 72 00 73 00 69 00 6f 00 6e 00 5c 00 52 00 75 00 6e 00
+
+# Code injection, by the name of the Windows function
+create_remote_thread: 43 72 65 61 74 65 52 65 6d 6f 74 65 54 68 72 65 61 64
+write_process_memory: 57 72 69 74 65 50 72 6f 63 65 73 73 4d 65 6d 6f 72 79

@@ -4,7 +4,7 @@ A static malware triage tool written in C. It looks at a suspicious file **witho
 
 I am building it while learning C for cybersecurity: it started as a clone of `hexdump -C`, and each phase of the roadmap adds a new analysis and a new C skill.
 
-> **Status:** phases 1 to 6 are done: hexray can show the bytes of a file, identify its real type, extract suspicious strings, spot packed or encrypted content, compute its SHA-256 and read ELF and PE headers. The remaining triage features are the roadmap below.
+> **Status:** all 7 phases of the roadmap are done: hexray can show the bytes of a file, identify its real type, extract suspicious strings, spot packed or encrypted content, compute its SHA-256, read ELF and PE headers and search for byte signatures.
 
 ## Build
 
@@ -174,6 +174,31 @@ Executables are hostile input, so every offset and size in them is treated as un
 
 Limitations: Mach-O is not supported, and an ELF with its section table stripped shows no sections or imports, even though the imports could still be recovered through its program headers.
 
+### `hexray scan`: search for byte signatures
+
+```
+hexray scan -r RULES [FILE...]
+```
+
+Reports which rules match each file, with the offset of the first match. Without `FILE`, it reads standard input. A rules file has one rule per line, and `#` starts a comment:
+
+```
+upx_magic: 55 50 58 21
+pe_x86_64: 50 45 00 00 64 86
+with_gap:  4d 5a ?? ?? 03
+```
+
+Each byte is two hex digits, and `??` means any byte. `rules/starter.rules` is a small set to begin with.
+
+```console
+$ build/hexray scan -r rules/starter.rules sample.exe
+sample.exe: upx_magic at 0x3e0
+sample.exe: pe_x86_64 at 0x80
+sample.exe: create_remote_thread at 0x2a14
+```
+
+This is the idea behind antivirus signatures and YARA, in a much smaller form: real YARA rules can also combine conditions, use regular expressions and match text in any case.
+
 ## Roadmap
 
 - [x] **Phase 1: hex dump.** A byte-for-byte clone of `hexdump -C`.
@@ -182,7 +207,7 @@ Limitations: Mach-O is not supported, and an ELF with its section table stripped
 - [x] **Phase 4: entropy.** Spotting packed or encrypted files.
 - [x] **Phase 5: hashes.** SHA-256 written by hand.
 - [x] **Phase 6: executable headers.** ELF and PE.
-- [ ] **Phase 7: signatures.** A mini YARA.
+- [x] **Phase 7: signatures.** A mini YARA.
 
 Each phase will be added as a new subcommand.
 

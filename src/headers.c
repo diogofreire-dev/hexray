@@ -24,8 +24,6 @@
 #include <unistd.h>
 
 #define COMMAND_NAME "hexray headers"
-#define MAX_INPUT_SIZE ((size_t) 1 << 30)    // 1 GiB: the whole file is kept in memory
-#define FIRST_BUFFER_SIZE ((size_t) 1 << 20)
 
 // A file can declare many sections covering all of its bytes, to make us measure the
 // same data thousands of times. This caps the work at a few passes over the file.
@@ -99,55 +97,6 @@ static int has_import(const Binary *b, const char *wanted)
             return 1;
         }
     }
-    return 0;
-}
-
-// Reads the whole input into memory, because headers point all over the file and
-// standard input cannot jump around. Returns 0 on success, -1 on failure (reported).
-static int read_all(FILE *in, const char *label, unsigned char **out, size_t *out_size)
-{
-    size_t capacity = FIRST_BUFFER_SIZE;
-    size_t size = 0;
-    unsigned char *data = malloc(capacity);
-
-    while (data != NULL)
-    {
-        size += fread(data + size, 1, capacity - size, in);
-        if (size < capacity)
-        {
-            break;   // the input ended (or failed, checked below)
-        }
-        if (capacity >= MAX_INPUT_SIZE)
-        {
-            fprintf(stderr, COMMAND_NAME ": ");
-            print_untrusted(stderr, label);
-            fprintf(stderr, ": file is too large (the limit is 1 GiB)\n");
-            free(data);
-            return -1;
-        }
-        capacity *= 2;
-        unsigned char *grown = realloc(data, capacity);
-        if (grown == NULL)
-        {
-            free(data);
-        }
-        data = grown;
-    }
-
-    if (data == NULL)
-    {
-        fprintf(stderr, COMMAND_NAME ": out of memory\n");
-        return -1;
-    }
-    if (ferror(in))
-    {
-        print_file_error(COMMAND_NAME, label, errno);
-        free(data);
-        return -1;
-    }
-
-    *out = data;
-    *out_size = size;
     return 0;
 }
 
@@ -255,9 +204,10 @@ static void print_warnings(const Binary *b)
 // Returns 0 on success, -1 on an error (already reported)
 static int analyse(FILE *in, const char *label, const Options *opts)
 {
+    // The whole input, because headers point all over the file and stdin cannot jump around
     unsigned char *data;
     size_t size;
-    if (read_all(in, label, &data, &size) != 0)
+    if (read_all(in, COMMAND_NAME, label, &data, &size) != 0)
     {
         return -1;
     }

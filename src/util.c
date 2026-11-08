@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_INPUT_SIZE ((size_t) 1 << 30)
+#define FIRST_BUFFER_SIZE ((size_t) 1 << 20)
+
 int parse_size(const char *text, int base, unsigned long long *out)
 {
     char *end;
@@ -37,4 +40,51 @@ void print_file_error(const char *command, const char *label, int error)
     fprintf(stderr, "%s: ", command);
     print_untrusted(stderr, label);
     fprintf(stderr, ": %s\n", strerror(error));
+}
+
+int read_all(FILE *in, const char *command, const char *label, unsigned char **out, size_t *out_size)
+{
+    size_t capacity = FIRST_BUFFER_SIZE;
+    size_t size = 0;
+    unsigned char *data = malloc(capacity);
+
+    while (data != NULL)
+    {
+        size += fread(data + size, 1, capacity - size, in);
+        if (size < capacity)
+        {
+            break;   // the input ended (or failed, checked below)
+        }
+        if (capacity >= MAX_INPUT_SIZE)
+        {
+            fprintf(stderr, "%s: ", command);
+            print_untrusted(stderr, label);
+            fprintf(stderr, ": file is too large (the limit is 1 GiB)\n");
+            free(data);
+            return -1;
+        }
+        capacity *= 2;
+        unsigned char *grown = realloc(data, capacity);
+        if (grown == NULL)
+        {
+            free(data);
+        }
+        data = grown;
+    }
+
+    if (data == NULL)
+    {
+        fprintf(stderr, "%s: out of memory\n", command);
+        return -1;
+    }
+    if (ferror(in))
+    {
+        print_file_error(command, label, errno);
+        free(data);
+        return -1;
+    }
+
+    *out = data;
+    *out_size = size;
+    return 0;
 }
