@@ -4,7 +4,7 @@ A static malware triage tool written in C. It looks at a suspicious file **witho
 
 I am building it while learning C for cybersecurity: it started as a clone of `hexdump -C`, and each phase of the roadmap adds a new analysis and a new C skill.
 
-> **Status:** phases 1 and 2 are done: hexray can show the bytes of a file and identify its real type. The remaining triage features are the roadmap below.
+> **Status:** phases 1 to 3 are done: hexray can show the bytes of a file, identify its real type and extract suspicious strings. The remaining triage features are the roadmap below.
 
 ## Build
 
@@ -59,11 +59,44 @@ notes.txt: Unknown (no known signature)
 
 `MISMATCH` means the extension claims a format the content does not have. An extension hexray does not know is never flagged. The exit code is 0 when every file could be read, even if some were flagged, and 1 if any file could not be read.
 
+### `hexray strings`: extract text and flag what stands out
+
+```
+hexray strings [-f] [-v] [-n MIN] [FILE]
+```
+
+| Option | Meaning |
+|---|---|
+| `-f` | show only the flagged strings |
+| `-v` | show long strings in full (by default they are cut after 200 characters) |
+| `-n MIN` | shortest string to report (default 4, smallest 2) |
+| `FILE` | file to read; without it, read standard input |
+
+Finds ASCII and UTF-16 (little-endian, the one Windows uses) strings, and prints the offset of each one so you can inspect it with `hexray dump -s`.
+
+```console
+$ build/hexray strings -f dropper.bin
+00001a40  ascii   http://203.0.113.5/stage2  [URL, IP]
+00001a80  utf-16  cmd.exe /c del %TEMP%\a.bat  [SHELL]
+00001b00  utf-16  Software\Microsoft\Windows\CurrentVersion\Run  [PERSISTENCE]
+```
+
+| Flag | Raised by |
+|---|---|
+| `URL` | `http://`, `https://`, `ftp://` |
+| `IP` | an IPv4 address |
+| `SHELL` | `cmd.exe`, `powershell`, `/bin/sh`, `/bin/bash` |
+| `ENCODED-COMMAND` | `powershell` together with `-enc` |
+| `PERSISTENCE` | the registry `CurrentVersion\Run` keys |
+| `BASE64` | 40 or more Base64 characters, mixing upper case, lower case and digits |
+
+A flag means "look at this", not "this is malware". Legitimate programs contain URLs and shell paths too, and a four-part version number looks exactly like an IP address.
+
 ## Roadmap
 
 - [x] **Phase 1: hex dump.** A byte-for-byte clone of `hexdump -C`.
 - [x] **Phase 2: file type detection.** Magic bytes and fake extensions.
-- [ ] **Phase 3: strings.** Extraction and suspicious patterns.
+- [x] **Phase 3: strings.** Extraction and suspicious patterns.
 - [ ] **Phase 4: entropy.** Spotting packed or encrypted files.
 - [ ] **Phase 5: hashes.** SHA-256 written by hand.
 - [ ] **Phase 6: executable headers.** ELF and PE.

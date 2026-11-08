@@ -16,10 +16,11 @@
 
 #include "dump.h"   // "" looks in this folder first; <> only in the system folders
 
+#include "util.h"
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -40,23 +41,6 @@ static void usage(void)
     fprintf(stderr, "Usage: " COMMAND_NAME " [-v] [-s OFFSET] [-n LENGTH] [FILE]\n");
 }
 
-// With base 0, strtoull accepts decimal (16), hex (0x10) and octal (020); with base 10
-// only decimal. hexdump reads -s with base 0 and -n as decimal, so we do the same.
-static int parse_size(const char *text, int base, unsigned long long *out)
-{
-    char *end;
-    errno = 0;
-    unsigned long long value = strtoull(text, &end, base);
-    // strtoull accepts "-1" and turns it into a huge number, so reject any minus sign
-    // by hand (strchr, not text[0], because strtoull also skips leading spaces)
-    if (end == text || *end != '\0' || errno == ERANGE || strchr(text, '-') != NULL)
-    {
-        return -1;
-    }
-    *out = value;
-    return 0;
-}
-
 // Returns 0 on success, -1 on invalid options
 static int parse_options(int argc, char *argv[], Options *opts)
 {
@@ -67,6 +51,7 @@ static int parse_options(int argc, char *argv[], Options *opts)
     int opt;
     while ((opt = getopt(argc, argv, "s:n:v")) != -1)
     {
+        // hexdump reads -s with base 0 (hex and octal too) and -n as decimal, so we do the same
         switch (opt)
         {
             case 's':

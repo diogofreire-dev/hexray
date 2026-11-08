@@ -12,8 +12,8 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "type.h"
+#include "util.h"
 
-#include <ctype.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -159,19 +159,6 @@ static const FileType *find_mismatch(const FileType *detected, const char *exten
         }
     }
     return NULL;
-}
-
-// A file name is untrusted input too: it can contain terminal escape sequences that
-// recolour or rewrite what the analyst sees. Control characters are printed as '?'.
-// Bytes above 127 are kept, so names with accents still read correctly. The cast is
-// needed because ctype functions are undefined for negative values, and a plain char
-// can be negative.
-static void print_untrusted(FILE *out, const char *text)
-{
-    for (; *text != '\0'; text++)
-    {
-        fputc(iscntrl((unsigned char) *text) ? '?' : *text, out);
-    }
 }
 
 static void print_error(const char *label, int error)

@@ -55,10 +55,9 @@ $(BUILD)/debug/obj/%.o: src/%.c
 
 # The sanitized build catches memory bugs; the normal one is what actually ships
 test: $(TARGET) $(DEBUG_TARGET)
-	@tests/test_dump.sh $(DEBUG_TARGET)
-	@tests/test_dump.sh $(TARGET)
-	@tests/test_type.sh $(DEBUG_TARGET)
-	@tests/test_type.sh $(TARGET)
+	@for script in tests/test_*.sh; do \
+		$$script $(DEBUG_TARGET) && $$script $(TARGET) || exit 1; \
+	done
 
 # The leading - keeps make going if the program exits with an error code
 run: $(DEBUG_TARGET)
