@@ -4,7 +4,7 @@ A static malware triage tool written in C. It looks at a suspicious file **witho
 
 I am building it while learning C for cybersecurity: it started as a clone of `hexdump -C`, and each phase of the roadmap adds a new analysis and a new C skill.
 
-> **Status:** phases 1 to 3 are done: hexray can show the bytes of a file, identify its real type and extract suspicious strings. The remaining triage features are the roadmap below.
+> **Status:** phases 1 to 4 are done: hexray can show the bytes of a file, identify its real type, extract suspicious strings and spot packed or encrypted content. The remaining triage features are the roadmap below.
 
 ## Build
 
@@ -92,12 +92,44 @@ $ build/hexray strings -f dropper.bin
 
 A flag means "look at this", not "this is malware". Legitimate programs contain URLs and shell paths too, and a four-part version number looks exactly like an IP address.
 
+### `hexray entropy`: spot packed or encrypted content
+
+```
+hexray entropy [-q] [-b SIZE] [FILE]
+```
+
+| Option | Meaning |
+|---|---|
+| `-q` | show only the summary, without the graph |
+| `-b SIZE` | size of each block in bytes (decimal, or hex with `0x`; default 4096, smallest 1024) |
+| `FILE` | file to read; without it, read standard input |
+
+Shows the Shannon entropy of each block, from 0 (all bytes the same) to 8 (pure noise), and searches the file for the signatures that common packers leave behind.
+
+```console
+$ build/hexray entropy sample.exe
+Offset    Entropy  0 to 8
+00000000  3.41     ##############..................
+00001000  7.98     ################################  HIGH
+00002000  7.97     ################################  HIGH
+00003000  7.98     ################################  HIGH
+
+Type:     Windows executable (PE)
+Size:     16384 bytes
+Entropy:  7.44 of 8.00
+High:     75% of the file (blocks above 7.20)
+Packer:   UPX ("UPX!" at offset 0x3e0)
+Verdict:  PACKED? Most of this executable is high entropy
+```
+
+The verdict takes the file type into account: an executable that is at least 70% high entropy is probably packed, while a ZIP or JPEG is compressed by design. Like the string flags, it is a reason to look closer and not a proof. Malware can also keep its entropy low on purpose.
+
 ## Roadmap
 
 - [x] **Phase 1: hex dump.** A byte-for-byte clone of `hexdump -C`.
 - [x] **Phase 2: file type detection.** Magic bytes and fake extensions.
 - [x] **Phase 3: strings.** Extraction and suspicious patterns.
-- [ ] **Phase 4: entropy.** Spotting packed or encrypted files.
+- [x] **Phase 4: entropy.** Spotting packed or encrypted files.
 - [ ] **Phase 5: hashes.** SHA-256 written by hand.
 - [ ] **Phase 6: executable headers.** ELF and PE.
 - [ ] **Phase 7: signatures.** A mini YARA.

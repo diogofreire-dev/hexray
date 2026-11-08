@@ -12,4 +12,7 @@ int parse_size(const char *text, int base, unsigned long long *out);
 // Prints text that came from outside the program, with control characters as '?'.
 void print_untrusted(FILE *out, const char *text);
 
+// Prints "command: label: reason" on stderr. `error` is a value of errno.
+void print_file_error(const char *command, const char *label, int error);
+
 #endif

@@ -11,6 +11,8 @@ CFLAGS  = -std=c17 -Wall -Wextra -g
 # so changing a header rebuilds exactly the files that use it
 DEPFLAGS = -MMD -MP
 SANITIZE = -fsanitize=address,undefined
+# The maths library (log2). macOS always links it, but Linux needs to be told.
+LDLIBS  = -lm
 BUILD   = build
 
 SRCS = $(wildcard src/*.c)
@@ -39,10 +41,10 @@ help:
 
 # Link: join every .o into one program
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 $(DEBUG_TARGET): $(DEBUG_OBJS)
-	$(CC) $(CFLAGS) $(SANITIZE) $^ -o $@
+	$(CC) $(CFLAGS) $(SANITIZE) $^ -o $@ $(LDLIBS)
 
 # Compile: one .c into one .o. $< is the .c file, $@ is the .o being built
 $(BUILD)/obj/%.o: src/%.c

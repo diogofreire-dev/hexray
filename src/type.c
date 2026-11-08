@@ -22,16 +22,16 @@
 #include <unistd.h>
 
 #define COMMAND_NAME "hexray type"
-#define HEADER_SIZE 8       // how many bytes we need to read to tell the formats apart
 #define MAX_EXTENSIONS 12
 
 typedef struct
 {
     const char *name;
-    unsigned char magic[HEADER_SIZE];
+    unsigned char magic[TYPE_HEADER_SIZE];
     size_t magic_length;    // 0 = this format has no signature (plain text)
     // Optional second check, for formats that share a signature. NULL = none needed.
     int (*confirm)(const unsigned char *header, size_t length);
+    int is_executable;      // a native program, which is what packers are used on
     // Unused slots are NULL: in an initialiser, whatever is left out becomes zero
     const char *extensions[MAX_EXTENSIONS];
 } FileType;
@@ -61,29 +61,29 @@ static int is_java_class(const unsigned char *header, size_t length)
 }
 
 static const FileType types[] = {
-    {"Windows executable (PE)", {0x4d, 0x5a}, 2, NULL,
+    {"Windows executable (PE)", {0x4d, 0x5a}, 2, NULL, 1,
      {"exe", "dll", "sys", "scr", "ocx", "cpl", "com", "efi"}},
-    {"Linux executable (ELF)", {0x7f, 0x45, 0x4c, 0x46}, 4, NULL,
+    {"Linux executable (ELF)", {0x7f, 0x45, 0x4c, 0x46}, 4, NULL, 1,
      {"so", "o", "elf"}},
-    {"macOS executable (Mach-O 64-bit)", {0xcf, 0xfa, 0xed, 0xfe}, 4, NULL,
+    {"macOS executable (Mach-O 64-bit)", {0xcf, 0xfa, 0xed, 0xfe}, 4, NULL, 1,
      {"dylib", "so", "o", "bundle"}},
-    {"macOS universal binary", {0xca, 0xfe, 0xba, 0xbe}, 4, is_universal_binary,
+    {"macOS universal binary", {0xca, 0xfe, 0xba, 0xbe}, 4, is_universal_binary, 1,
      {"dylib", "so", "o", "bundle"}},
-    {"Java class file", {0xca, 0xfe, 0xba, 0xbe}, 4, is_java_class,
+    {"Java class file", {0xca, 0xfe, 0xba, 0xbe}, 4, is_java_class, 0,
      {"class"}},
-    {"ZIP archive", {0x50, 0x4b, 0x03, 0x04}, 4, NULL,
+    {"ZIP archive", {0x50, 0x4b, 0x03, 0x04}, 4, NULL, 0,
      {"zip", "docx", "docm", "xlsx", "xlsm", "pptx", "jar", "apk", "odt", "ods", "odp"}},
-    {"Old Office document (OLE2)", {0xd0, 0xcf, 0x11, 0xe0}, 4, NULL,
+    {"Old Office document (OLE2)", {0xd0, 0xcf, 0x11, 0xe0}, 4, NULL, 0,
      {"doc", "xls", "ppt", "msi", "msg"}},
-    {"PDF document", {0x25, 0x50, 0x44, 0x46}, 4, NULL,
+    {"PDF document", {0x25, 0x50, 0x44, 0x46}, 4, NULL, 0,
      {"pdf"}},
-    {"PNG image", {0x89, 0x50, 0x4e, 0x47}, 4, NULL,
+    {"PNG image", {0x89, 0x50, 0x4e, 0x47}, 4, NULL, 0,
      {"png"}},
-    {"JPEG image", {0xff, 0xd8, 0xff}, 3, NULL,
+    {"JPEG image", {0xff, 0xd8, 0xff}, 3, NULL, 0,
      {"jpg", "jpeg"}},
     // Text has no signature, so it can never be detected. It is here so that an
     // executable called notes.txt is still caught by the extension check.
-    {"Text file", {0}, 0, NULL,
+    {"Text file", {0}, 0, NULL, 0,
      {"txt", "csv", "log", "md"}},
 };
 
@@ -109,6 +109,13 @@ static const FileType *identify(const unsigned char *header, size_t length)
         }
     }
     return NULL;
+}
+
+const char *type_identify(const unsigned char *header, size_t length, int *is_executable)
+{
+    const FileType *type = identify(header, length);
+    *is_executable = type != NULL && type->is_executable;
+    return type != NULL ? type->name : NULL;
 }
 
 // Returns what follows the last dot of the file name, or NULL if there is none.
@@ -161,22 +168,15 @@ static const FileType *find_mismatch(const FileType *detected, const char *exten
     return NULL;
 }
 
-static void print_error(const char *label, int error)
-{
-    fprintf(stderr, COMMAND_NAME ": ");
-    print_untrusted(stderr, label);
-    fprintf(stderr, ": %s\n", strerror(error));
-}
-
 // Prints the verdict for one input. `path` is NULL for stdin, which has no extension.
 // Returns 0 on success, -1 on a read error.
 static int report(FILE *in, const char *label, const char *path)
 {
-    unsigned char header[HEADER_SIZE];
+    unsigned char header[TYPE_HEADER_SIZE];
     size_t length = fread(header, 1, sizeof(header), in);
     if (ferror(in))
     {
-        print_error(label, errno);
+        print_file_error(COMMAND_NAME, label, errno);
         return -1;
     }
 
@@ -224,7 +224,7 @@ int cmd_type(int argc, char *argv[])
         FILE *in = fopen(argv[i], "rb");   // read only: samples are never executed
         if (in == NULL)
         {
-            print_error(argv[i], errno);
+            print_file_error(COMMAND_NAME, argv[i], errno);
             status = 1;
             continue;
         }

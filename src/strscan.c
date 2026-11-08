@@ -372,9 +372,7 @@ static int scan(FILE *in, const char *label, const Options *opts)
     }
     else if (ferror(in))
     {
-        fprintf(stderr, COMMAND_NAME ": ");
-        print_untrusted(stderr, label);
-        fprintf(stderr, ": %s\n", strerror(errno));
+        print_file_error(COMMAND_NAME, label, errno);
         status = -1;
     }
     else
@@ -447,9 +445,7 @@ int cmd_strings(int argc, char *argv[])
         in = fopen(opts.path, "rb");   // read only: samples are never executed
         if (in == NULL)
         {
-            fprintf(stderr, COMMAND_NAME ": ");
-            print_untrusted(stderr, label);
-            fprintf(stderr, ": %s\n", strerror(errno));
+            print_file_error(COMMAND_NAME, label, errno);
             return 1;
         }
     }

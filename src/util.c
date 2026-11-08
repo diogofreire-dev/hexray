@@ -31,3 +31,10 @@ void print_untrusted(FILE *out, const char *text)
         fputc(iscntrl((unsigned char) *text) ? '?' : *text, out);
     }
 }
+
+void print_file_error(const char *command, const char *label, int error)
+{
+    fprintf(stderr, "%s: ", command);
+    print_untrusted(stderr, label);
+    fprintf(stderr, ": %s\n", strerror(error));
+}

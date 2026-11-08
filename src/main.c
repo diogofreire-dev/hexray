@@ -4,6 +4,7 @@
 // .c/.h pair, so adding one later means writing it and adding a line to `commands`.
 
 #include "dump.h"
+#include "entropy.h"
 #include "strscan.h"
 #include "type.h"
 
@@ -24,6 +25,7 @@ static const Command commands[] = {
     {"dump", cmd_dump, "show the bytes of a file (same output as hexdump -C)"},
     {"type", cmd_type, "identify files by their magic bytes and flag fake extensions"},
     {"strings", cmd_strings, "extract readable text and flag suspicious strings"},
+    {"entropy", cmd_entropy, "measure randomness to spot packed or encrypted content"},
 };
 
 // sizeof(whole array) / sizeof(one element) = number of elements. It only works
