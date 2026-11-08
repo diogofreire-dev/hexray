@@ -5,6 +5,7 @@
 
 #include "dump.h"
 #include "entropy.h"
+#include "hash.h"
 #include "strscan.h"
 #include "type.h"
 
@@ -26,6 +27,7 @@ static const Command commands[] = {
     {"type", cmd_type, "identify files by their magic bytes and flag fake extensions"},
     {"strings", cmd_strings, "extract readable text and flag suspicious strings"},
     {"entropy", cmd_entropy, "measure randomness to spot packed or encrypted content"},
+    {"hash", cmd_hash, "print the SHA-256 of files, to look them up in malware databases"},
 };
 
 // sizeof(whole array) / sizeof(one element) = number of elements. It only works

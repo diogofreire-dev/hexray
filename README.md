@@ -4,7 +4,7 @@ A static malware triage tool written in C. It looks at a suspicious file **witho
 
 I am building it while learning C for cybersecurity: it started as a clone of `hexdump -C`, and each phase of the roadmap adds a new analysis and a new C skill.
 
-> **Status:** phases 1 to 4 are done: hexray can show the bytes of a file, identify its real type, extract suspicious strings and spot packed or encrypted content. The remaining triage features are the roadmap below.
+> **Status:** phases 1 to 5 are done: hexray can show the bytes of a file, identify its real type, extract suspicious strings, spot packed or encrypted content and compute its SHA-256. The remaining triage features are the roadmap below.
 
 ## Build
 
@@ -124,13 +124,28 @@ Verdict:  PACKED? Most of this executable is high entropy
 
 The verdict takes the file type into account: an executable that is at least 70% high entropy is probably packed, while a ZIP or JPEG is compressed by design. Like the string flags, it is a reason to look closer and not a proof. Malware can also keep its entropy low on purpose.
 
+### `hexray hash`: fingerprint a file
+
+```
+hexray hash [FILE...]
+```
+
+Prints the SHA-256 of each file, in the same format as `shasum -a 256`. Without `FILE`, it reads standard input. SHA-256 is implemented by hand in `src/sha256.c`, with no crypto library, and `tests/test_hash.sh` checks it against the NIST test vectors and the real `shasum`.
+
+```console
+$ printf 'abc' | build/hexray hash
+ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad  -
+```
+
+Search the hash on VirusTotal or MalwareBazaar to see whether a file is already known as malware. Search the hash and do not upload the file: uploads can be seen by others, including whoever made the malware, and a private document would be exposed.
+
 ## Roadmap
 
 - [x] **Phase 1: hex dump.** A byte-for-byte clone of `hexdump -C`.
 - [x] **Phase 2: file type detection.** Magic bytes and fake extensions.
 - [x] **Phase 3: strings.** Extraction and suspicious patterns.
 - [x] **Phase 4: entropy.** Spotting packed or encrypted files.
-- [ ] **Phase 5: hashes.** SHA-256 written by hand.
+- [x] **Phase 5: hashes.** SHA-256 written by hand.
 - [ ] **Phase 6: executable headers.** ELF and PE.
 - [ ] **Phase 7: signatures.** A mini YARA.
 
