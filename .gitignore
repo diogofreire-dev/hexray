@@ -1,0 +1,14 @@
+# Build output
+build/
+*.o
+*.d
+*.dSYM/
+a.out
+/hexray
+
+# Malware samples must NEVER be committed
+samples/
+
+# macOS and editors
+.DS_Store
+.vscode/
