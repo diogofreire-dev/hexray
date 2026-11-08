@@ -6,6 +6,10 @@ I am building it while learning C for cybersecurity: it started as a clone of `h
 
 > **Status:** all 7 phases of the roadmap are done: hexray can show the bytes of a file, identify its real type, extract suspicious strings, spot packed or encrypted content, compute its SHA-256, read ELF and PE headers and search for byte signatures.
 
+![hexray analysing a Windows program disguised as invoice.pdf](docs/demo.png)
+
+*Real hexray output on a harmless file built for this demo. It has the headers and strings of a suspicious sample, but contains no working code.*
+
 ## Build
 
 Needs `clang` and `make` (and `python3` for `make test`). Developed on macOS (Apple Silicon).
