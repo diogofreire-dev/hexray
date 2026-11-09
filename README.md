@@ -10,6 +10,8 @@ I am building it while learning C for cybersecurity: it started as a clone of `h
 
 *Real hexray output on a harmless file built for this demo. It has the headers and strings of a suspicious sample, but contains no working code.*
 
+**Want to understand the code?** Read [How hexray works](docs/how-it-works.md) ([em português](docs/how-it-works.pt.md)).
+
 ## Build
 
 Needs `clang` and `make` (and `python3` for `make test`). Developed on macOS (Apple Silicon).
